@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>杭州西湖二日游</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            height: 100%;
+            width: 100%;
+            overflow: hidden; /* 防止出现滚动条 */
+        }
+        
+        body {
+            font-family: 'Avenir Next', 'Helvetica Neue', sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+        }
+        
+        header {
+            background-color: #8abcd1;
+            color: rgb(254, 254, 129);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            z-index: 1;
+            flex-shrink: 0; /* 防止header被压缩 */
+        }
+        
+        .header-title {
+            font-size: 1.5em;
+            font-weight: 500;
+        }
+        
+        .main-container {
+            display: flex;
+            flex: 1;
+            position: relative;
+            min-height: 0; /* 修复flex容器中的滚动问题 */
+        }
+        
+        .map-container {
+            flex: 1;
+            position: relative;
+            min-width: 0; /* 修复flex容器中的溢出问题 */
+        }
+        
+        .basemap-gallery-container {
+            width: 250px;
+            background-color: #f5f5f5;
+            border-left: 1px solid #ddd;
+            padding: 10px;
+            overflow-y: auto;
+            min-width: 0; /* 修复flex容器中的溢出问题 */
+        }
+        
+        .basemap-gallery-title {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        arcgis-map {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .basemap-gallery-container {
+                width: 100%;
+                height: 150px;
+                border-left: none;
+                border-top: 1px solid #ddd;
+            }
+        }
+    </style>
+    <script type="module" src="https://js.arcgis.com/calcite-components/3.0.3/calcite.esm.js"></script>
+    <link rel="stylesheet" href="https://js.arcgis.com/4.32/esri/themes/light/main.css" />
+    <script src="https://js.arcgis.com/4.32/"></script>
+    <script type="module" src="https://js.arcgis.com/map-components/4.32/arcgis-map-components.esm.js"></script>
+</head>
+<body>
+    <header>
+        <div class="header-title">杭州西湖二日游</div>
+        <calcite-button appearance="transparent" icon-start="information">关于</calcite-button>
+    </header>
+    
+    <div class="main-container">
+        <div class="map-container">
+            <arcgis-map id="mapView" basemap="streets-navigation-vector" center="120.13, 30.25" zoom="13">
+                <arcgis-search position="top-right"></arcgis-search>
+                <arcgis-scale-bar position="bottom-left"></arcgis-scale-bar>
+                <arcgis-legend position="bottom-right"></arcgis-legend>
+                <arcgis-layer-list position="top-right"></arcgis-layer-list>
+                <arcgis-basemap-toggle position="bottom-right"></arcgis-basemap-toggle>
+            </arcgis-map>
+        </div>
+        
+        <div class="basemap-gallery-container">
+            <div class="basemap-gallery-title">底图库</div>
+            <arcgis-basemap-gallery id="basemapGallery" activeBasemap="streets-navigation-vector"></arcgis-basemap-gallery>
+        </div>
+    </div>
+</body>
+</html>
+<script>
+    require([
+        "esri/layers/FeatureLayer",
+        "esri/widgets/BasemapGallery",
+        "esri/widgets/Expand"
+    ], (FeatureLayer, BasemapGallery, Expand) => {
+        const arcgisMap = document.querySelector("arcgis-map");
+        
+        arcgisMap.addEventListener("arcgisViewReadyChange", () => {
+            // 添加专题图层
+            const featureLayer = new FeatureLayer({
+                url: "https://www.geosceneonline.cn/server/rest/services/Hosted/西湖查看图层/FeatureServer/0",
+                popupTemplate: {
+                    title: "西湖景点信息",
+                    content: [{
+                        type: "fields",
+                        fieldInfos: [
+                            { fieldName: "Rep_Name", label: "名称" },
+                            { fieldName: "inc_Type", label: "类型" }
+                        ]
+                    }]
+                }
+            });
+            
+            arcgisMap.map.add(featureLayer);
+            
+            // 配置图层列表
+            const arcgisLayerList = document.querySelector("arcgis-layer-list");
+            arcgisLayerList.listItemCreatedFunction = (event) => {
+                const { item } = event;
+                if (item.layer.type !== "group") {
+                    item.panel = {
+                        content: "legend"
+                    };
+                }
+            };
+            
+            // 获取底图库组件
+            const basemapGallery = document.getElementById("basemapGallery");
+            
+            // 正确的事件监听方式
+            basemapGallery.addEventListener("arcgisBasemapGallerySelect", (event) => {
+                arcgisMap.basemap = event.detail.item.basemap;
+            });
+            
+            // 确保底图库知道它控制的是哪个地图
+            basemapGallery.view = arcgisMap.view;
+        });
+        // 添加一些交互功能
+        document.addEventListener("DOMContentLoaded", () => {
+        // 关于按钮点击事件
+        document.querySelector("calcite-button").addEventListener("click", () => {
+            alert("这是一个可以查看杭州西湖及其附近各个景点的地图应用");
+            });
+        });
+    });
+</script>
